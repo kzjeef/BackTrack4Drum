@@ -1,8 +1,8 @@
-# Drum Remover
+# BackTrack4Drum
 
-使用 [Demucs](https://github.com/facebookresearch/demucs) (Meta AI) 从音乐中去除架子鼓，基于 GPU 加速的 Docker 容器。
+为鼓手练习生成无鼓伴奏轨。
 
-Demucs 将音乐分离为 4 个音轨（人声、鼓、贝斯、其他乐器），本工具将除鼓以外的音轨合并输出。
+使用 [Demucs](https://github.com/facebookresearch/demucs) (Meta AI) 从音乐中去除架子鼓，基于 GPU 加速的 Docker 容器。把你喜欢的歌扔进来，拿到去掉鼓的伴奏，跟着一起练。
 
 ## 前置要求
 
@@ -64,12 +64,12 @@ docker compose run --rm drum-remover -m htdemucs_ft
 ### 不使用 docker compose
 
 ```bash
-docker build -t drum-remover .
+docker build -t backtrack4drum .
 
 docker run --rm --gpus 1 \
   -v $(pwd)/input:/data/input \
   -v $(pwd)/output:/data/output \
-  drum-remover
+  backtrack4drum
 ```
 
 ## 支持的音频格式
