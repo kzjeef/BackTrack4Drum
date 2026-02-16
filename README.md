@@ -1,8 +1,8 @@
-# BackTrack4Drum
+# BackTrack
 
-为鼓手练习生成无鼓伴奏轨。
+从音乐中去除或提取指定乐器的通用工具。
 
-使用 [Demucs](https://github.com/facebookresearch/demucs) (Meta AI) 从音乐中去除架子鼓。把你喜欢的歌扔进来，拿到去掉鼓的伴奏，跟着一起练。
+使用 [Demucs](https://github.com/facebookresearch/demucs) (Meta AI) 音源分离技术，支持鼓、吉他、贝斯、人声、钢琴。去掉某个乐器跟着练，或者单独提取某个乐器来采样、扒谱。
 
 **在线使用**：[https://huggingface.co/spaces/asherszhang/BackTrack4Drum](https://huggingface.co/spaces/asherszhang/BackTrack4Drum) — 无需安装，打开即用。
 
@@ -32,11 +32,41 @@ cp your_song.mp3 input/
 
 ### 3. 运行
 
+**去除乐器**（得到不含该乐器的伴奏）：
+
 ```bash
+# 去除鼓（默认）
 docker compose run --rm drum-remover
+
+# 去除吉他
+docker compose run --rm drum-remover -r guitar
+
+# 去除贝斯
+docker compose run --rm drum-remover -r bass
+
+# 去除人声
+docker compose run --rm drum-remover -r vocals
+
+# 去除钢琴
+docker compose run --rm drum-remover -r piano
 ```
 
-处理完成后，去掉鼓的文件会出现在 `output/` 目录中，文件名格式为 `原文件名_no_drums.mp3`。
+**提取乐器**（只保留该乐器）：
+
+```bash
+# 提取人声
+docker compose run --rm drum-remover -e vocals
+
+# 提取鼓
+docker compose run --rm drum-remover -e drums
+
+# 提取吉他
+docker compose run --rm drum-remover -e guitar
+```
+
+输出文件在 `output/` 目录：
+- 去除模式：`{原文件名}_no_{乐器}.mp3`
+- 提取模式：`{原文件名}_only_{乐器}.mp3`
 
 ## 高级用法
 
@@ -61,20 +91,25 @@ docker compose run --rm drum-remover -m htdemucs_ft
 可用模型：
 | 模型 | 说明 |
 |------|------|
-| `htdemucs` | 默认，速度与质量平衡 |
+| `htdemucs_6s` | 默认，6 音轨分离（drums, bass, vocals, guitar, piano, other） |
+| `htdemucs` | 4 音轨分离（drums, bass, vocals, other） |
 | `htdemucs_ft` | 微调版，质量更高，速度较慢 |
-| `htdemucs_6s` | 6 音轨分离（增加吉他、钢琴） |
 | `mdx_extra` | MDX 架构 |
 
 ### 不使用 docker compose
 
 ```bash
-docker build -t backtrack4drum .
+docker build -t backtrack .
 
 docker run --rm --gpus 1 \
   -v $(pwd)/input:/data/input \
   -v $(pwd)/output:/data/output \
-  backtrack4drum
+  backtrack -r guitar
+
+docker run --rm --gpus 1 \
+  -v $(pwd)/input:/data/input \
+  -v $(pwd)/output:/data/output \
+  backtrack -e vocals
 ```
 
 ## 在线部署
@@ -112,4 +147,5 @@ MP3, WAV, FLAC, OGG, M4A, WMA, AAC
 ## 输出
 
 - 格式：MP3（默认 320kbps）
-- 文件名：`{原文件名}_no_drums.mp3`
+- 去除模式：`{原文件名}_no_{乐器}.mp3`
+- 提取模式：`{原文件名}_only_{乐器}.mp3`

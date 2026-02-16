@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remove drums from audio files using Demucs (Meta AI)."""
+"""Remove or extract a specified instrument from audio files using Demucs (Meta AI)."""
 
 import argparse
 import glob
@@ -12,6 +12,8 @@ import soundfile as sf
 import torch
 from demucs.apply import apply_model
 from demucs.pretrained import get_model
+
+INSTRUMENTS = ("drums", "guitar", "bass", "vocals", "piano")
 
 
 def load_audio(path, samplerate, channels):
@@ -34,14 +36,17 @@ def load_audio(path, samplerate, channels):
         os.unlink(tmp_path)
 
 
-def process_file(model, filepath, output_dir, bitrate):
-    """Separate drums and save the drumless version."""
+def process_file(model, filepath, output_dir, bitrate, instrument, extract):
+    """Separate sources and save the result."""
     basename = os.path.splitext(os.path.basename(filepath))[0]
-    out_mp3 = os.path.join(output_dir, f"{basename}_no_drums.mp3")
-    tmp_wav = os.path.join(output_dir, f"{basename}_no_drums.wav")
+    tag = f"only_{instrument}" if extract else f"no_{instrument}"
+    out_mp3 = os.path.join(output_dir, f"{basename}_{tag}.mp3")
+    tmp_wav = os.path.join(output_dir, f"{basename}_{tag}.wav")
 
+    mode_str = "Extracting" if extract else "Removing"
     print(f"\n{'='*60}")
     print(f"Processing: {os.path.basename(filepath)}")
+    print(f"{mode_str}: {instrument}")
     print(f"{'='*60}")
 
     wav = load_audio(filepath, model.samplerate, model.audio_channels)
@@ -53,10 +58,21 @@ def process_file(model, filepath, output_dir, bitrate):
     sources = apply_model(model, wav.to(device), progress=True)
     sources = sources.squeeze(0)
 
-    drums_idx = model.sources.index("drums")
-    no_drums = sum(sources[i] for i in range(len(model.sources)) if i != drums_idx)
+    source_names = model.sources
+    print(f"Source names: {source_names}")
 
-    sf.write(tmp_wav, no_drums.cpu().numpy().T, model.samplerate)
+    if instrument not in source_names:
+        raise ValueError(
+            f"Instrument '{instrument}' not found in model sources {source_names}. "
+            f"Try a model that supports this instrument (e.g. htdemucs_6s for guitar/piano)."
+        )
+
+    if extract:
+        result = sources[source_names.index(instrument)]
+    else:
+        result = sum(sources[i] for i in range(len(source_names)) if source_names[i] != instrument)
+
+    sf.write(tmp_wav, result.cpu().numpy().T, model.samplerate)
     subprocess.run(
         ["ffmpeg", "-y", "-i", tmp_wav, "-b:a", bitrate, out_mp3],
         capture_output=True,
@@ -68,12 +84,20 @@ def process_file(model, filepath, output_dir, bitrate):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Remove drums from audio files using Demucs")
+    parser = argparse.ArgumentParser(description="Remove or extract an instrument from audio files using Demucs")
     parser.add_argument("input", nargs="*", help="Input audio files (default: all files in /data/input)")
+
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("-r", "--remove", choices=INSTRUMENTS, help="Instrument to remove (default: drums)")
+    mode.add_argument("-e", "--extract", choices=INSTRUMENTS, help="Instrument to extract (isolate)")
+
     parser.add_argument("-o", "--output", default="/data/output", help="Output directory")
     parser.add_argument("-b", "--bitrate", default="320k", help="MP3 bitrate (default: 320k)")
-    parser.add_argument("-m", "--model", default="htdemucs", help="Demucs model (default: htdemucs)")
+    parser.add_argument("-m", "--model", default="htdemucs_6s", help="Demucs model (default: htdemucs_6s)")
     args = parser.parse_args()
+
+    extract = args.extract is not None
+    instrument = args.extract if extract else (args.remove or "drums")
 
     os.makedirs(args.output, exist_ok=True)
 
@@ -95,7 +119,7 @@ def main():
     model.eval()
 
     for f in files:
-        process_file(model, f, args.output, args.bitrate)
+        process_file(model, f, args.output, args.bitrate, instrument, extract)
 
     print(f"\nAll done! Output files are in {args.output}")
 

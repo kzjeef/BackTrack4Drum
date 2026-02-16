@@ -9,11 +9,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY remove_drums.py .
+COPY remove_instrument.py .
 
 # Pre-download the default model
-RUN python -c "from demucs.pretrained import get_model; get_model('htdemucs')"
+RUN python -c "from demucs.pretrained import get_model; get_model('htdemucs_6s')"
 
 VOLUME ["/data/input", "/data/output"]
 
-ENTRYPOINT ["python", "remove_drums.py"]
+ENTRYPOINT ["python", "remove_instrument.py"]
