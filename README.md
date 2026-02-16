@@ -76,17 +76,24 @@ docker run --rm --gpus 1 \
   backtrack4drum
 ```
 
-## Hugging Face Spaces 部署
+## 在线部署
 
-无需本地 GPU，直接在浏览器中使用。
+无需本地 GPU，直接在浏览器中使用。`app.py` + `requirements-spaces.txt` 适用于以下平台。
 
-### 部署步骤
+### Hugging Face Spaces
 
-1. 在 [Hugging Face Spaces](https://huggingface.co/spaces) 创建新 Space，选择 **Gradio** SDK。
-2. 将以下文件上传到 Space 仓库：
-   - `app.py`
-   - `requirements-spaces.txt`（重命名为 `requirements.txt`）
-3. Space 会自动构建并启动。
+1. 创建新 [Space](https://huggingface.co/spaces)，选择 **Gradio** SDK。
+2. 上传 `app.py` 和 `requirements-spaces.txt`（重命名为 `requirements.txt`）。
+3. Space 自动构建并启动。
+
+### ModelScope 创空间
+
+1. 在 [ModelScope](https://modelscope.cn) 创建创空间，选择 **Gradio** SDK。
+2. 克隆创空间仓库：
+   ```bash
+   git clone http://oauth2:<your_git_token>@www.modelscope.cn/studios/<用户名>/<空间名>.git
+   ```
+3. 将 `app.py` 和 `requirements-spaces.txt`（重命名为 `requirements.txt`）放入仓库，push 即可。
 
 ### 本地测试
 
