@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Gradio interface for BackTrack — remove or extract instruments from audio using Demucs.
 
-Designed for Hugging Face Spaces with ZeroGPU.
+Designed for Hugging Face Spaces (CPU free tier).
 """
 
 import os
@@ -11,7 +11,6 @@ import tempfile
 import gradio as gr
 import numpy as np
 import soundfile as sf
-import spaces
 import torch
 from demucs.apply import apply_model
 from demucs.pretrained import get_model
@@ -25,6 +24,11 @@ INSTRUMENT_MAP = {
     "Piano": "piano",
 }
 MODES = ["Remove", "Extract"]
+
+# Load model once at startup
+print("Loading Demucs model (htdemucs_6s)...")
+MODEL = get_model("htdemucs_6s")
+MODEL.eval()
 
 
 def load_audio(path, samplerate, channels):
@@ -47,26 +51,21 @@ def load_audio(path, samplerate, channels):
         os.unlink(tmp_path)
 
 
-@spaces.GPU
 def process(audio_path, instrument, mode):
-    """Separate sources on GPU, return processed audio."""
+    """Separate sources on CPU, return processed audio."""
     if audio_path is None:
         raise gr.Error("Please upload an audio file.")
-
-    model = get_model("htdemucs_6s")
-    model.eval()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     target = INSTRUMENT_MAP[instrument]
     extract = mode == "Extract"
 
-    wav = load_audio(audio_path, model.samplerate, model.audio_channels)
-    wav = wav.unsqueeze(0).to(device)  # (1, channels, samples)
+    wav = load_audio(audio_path, MODEL.samplerate, MODEL.audio_channels)
+    wav = wav.unsqueeze(0)  # (1, channels, samples)
 
-    sources = apply_model(model, wav, progress=False)
+    sources = apply_model(MODEL, wav, progress=False)
     sources = sources.squeeze(0)  # (num_sources, channels, samples)
 
-    source_names = model.sources
+    source_names = MODEL.sources
 
     if extract:
         result = sources[source_names.index(target)]
@@ -76,7 +75,7 @@ def process(audio_path, instrument, mode):
     result_np = result.cpu().numpy().T  # (samples, channels)
 
     out_path = tempfile.mktemp(suffix=".wav")
-    sf.write(out_path, result_np, model.samplerate)
+    sf.write(out_path, result_np, MODEL.samplerate)
     return out_path
 
 
@@ -94,7 +93,7 @@ demo = gr.Interface(
         "**Remove** — get the song without the selected instrument (e.g. drumless backing track).\n\n"
         "**Extract** — isolate just the selected instrument (e.g. vocals only).\n\n"
         "Supports: Drums, Guitar, Bass, Vocals, Piano.\n\n"
-        "Running on free ZeroGPU provided by Hugging Face. Output format: WAV"
+        "Running on free CPU provided by Hugging Face. Processing takes about 5 minutes per song. Output format: WAV"
     ),
     flagging_mode="never",
 )
