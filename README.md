@@ -6,6 +6,8 @@
 
 **在线使用**：[https://huggingface.co/spaces/asherszhang/BackTrack4Drum](https://huggingface.co/spaces/asherszhang/BackTrack4Drum) — 无需安装，打开即用。
 
+**Colab (GPU 加速)**：[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kzjeef/BackTrack4Drum/blob/main/BackTrack4Drum.ipynb) — 免费 T4 GPU，处理更快。
+
 ## 前置要求
 
 - Docker
