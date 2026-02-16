@@ -78,7 +78,7 @@ docker run --rm --gpus 1 \
 
 ### 部署步骤
 
-1. 在 [Hugging Face Spaces](https://huggingface.co/spaces) 创建新 Space，选择 **Gradio** SDK 和 **ZeroGPU** 硬件。
+1. 在 [Hugging Face Spaces](https://huggingface.co/spaces) 创建新 Space，选择 **Gradio** SDK。
 2. 将以下文件上传到 Space 仓库：
    - `app.py`
    - `requirements-spaces.txt`（重命名为 `requirements.txt`）
