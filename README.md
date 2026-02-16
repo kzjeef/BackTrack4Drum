@@ -72,6 +72,27 @@ docker run --rm --gpus 1 \
   backtrack4drum
 ```
 
+## Hugging Face Spaces 部署
+
+无需本地 GPU，直接在浏览器中使用。
+
+### 部署步骤
+
+1. 在 [Hugging Face Spaces](https://huggingface.co/spaces) 创建新 Space，选择 **Gradio** SDK 和 **ZeroGPU** 硬件。
+2. 将以下文件上传到 Space 仓库：
+   - `app.py`
+   - `requirements-spaces.txt`（重命名为 `requirements.txt`）
+3. Space 会自动构建并启动。
+
+### 本地测试
+
+```bash
+pip install -r requirements-spaces.txt gradio
+python app.py
+```
+
+浏览器打开 `http://localhost:7860`，上传音频文件测试。
+
 ## 支持的音频格式
 
 MP3, WAV, FLAC, OGG, M4A, WMA, AAC
