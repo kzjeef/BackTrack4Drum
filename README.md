@@ -2,7 +2,9 @@
 
 为鼓手练习生成无鼓伴奏轨。
 
-使用 [Demucs](https://github.com/facebookresearch/demucs) (Meta AI) 从音乐中去除架子鼓，基于 GPU 加速的 Docker 容器。把你喜欢的歌扔进来，拿到去掉鼓的伴奏，跟着一起练。
+使用 [Demucs](https://github.com/facebookresearch/demucs) (Meta AI) 从音乐中去除架子鼓。把你喜欢的歌扔进来，拿到去掉鼓的伴奏，跟着一起练。
+
+**在线使用**：[https://huggingface.co/spaces/asherszhang/BackTrack4Drum](https://huggingface.co/spaces/asherszhang/BackTrack4Drum) — 无需安装，打开即用。
 
 ## 前置要求
 
