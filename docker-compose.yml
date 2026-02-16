@@ -1,0 +1,17 @@
+services:
+  drum-remover:
+    build: .
+    image: drum-remover
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./input:/data/input
+      - ./output:/data/output
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
