@@ -69,7 +69,8 @@ demo = gr.Interface(
     title="BackTrack4Drum",
     description=(
         "Upload a song and get it back without drums. Powered by Demucs (Meta AI).\n\n"
-        "Running on free CPU provided by Hugging Face. Processing takes about 5 minutes per song."
+        "Running on free CPU provided by Hugging Face. Processing takes about 5 minutes per song.\n\n"
+        "Output format: WAV"
     ),
     flagging_mode="never",
 )
