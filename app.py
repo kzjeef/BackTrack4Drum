@@ -67,7 +67,10 @@ demo = gr.Interface(
     inputs=gr.Audio(type="filepath", label="Upload audio (MP3/WAV/FLAC/...)"),
     outputs=gr.Audio(type="filepath", label="Drumless audio"),
     title="BackTrack4Drum",
-    description="Upload a song and get it back without drums. Powered by Demucs (Meta AI).",
+    description=(
+        "Upload a song and get it back without drums. Powered by Demucs (Meta AI).\n\n"
+        "Running on free CPU provided by Hugging Face. Processing takes about 5 minutes per song."
+    ),
     flagging_mode="never",
 )
 
