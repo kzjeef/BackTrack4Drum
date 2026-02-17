@@ -36,12 +36,21 @@ def load_audio(path, samplerate, channels):
         os.unlink(tmp_path)
 
 
+def save_mp3(audio_np, samplerate, out_mp3, bitrate):
+    """Save numpy audio array as MP3 via temporary WAV."""
+    tmp_wav = out_mp3.replace(".mp3", ".tmp.wav")
+    sf.write(tmp_wav, audio_np, samplerate)
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", tmp_wav, "-b:a", bitrate, out_mp3],
+        capture_output=True,
+        check=True,
+    )
+    os.unlink(tmp_wav)
+
+
 def process_file(model, filepath, output_dir, bitrate, instrument, extract):
     """Separate sources and save the result."""
     basename = os.path.splitext(os.path.basename(filepath))[0]
-    tag = f"only_{instrument}" if extract else f"no_{instrument}"
-    out_mp3 = os.path.join(output_dir, f"{basename}_{tag}.mp3")
-    tmp_wav = os.path.join(output_dir, f"{basename}_{tag}.wav")
 
     mode_str = "Extracting" if extract else "Removing"
     print(f"\n{'='*60}")
@@ -67,20 +76,21 @@ def process_file(model, filepath, output_dir, bitrate, instrument, extract):
             f"Try a model that supports this instrument (e.g. htdemucs_6s for guitar/piano)."
         )
 
+    target_idx = source_names.index(instrument)
+    isolated = sources[target_idx].cpu().numpy().T
+    backing = sum(sources[i] for i in range(len(source_names)) if i != target_idx).cpu().numpy().T
+
     if extract:
-        result = sources[source_names.index(instrument)]
+        out_mp3 = os.path.join(output_dir, f"{basename}_only_{instrument}.mp3")
+        save_mp3(isolated, model.samplerate, out_mp3, bitrate)
+        print(f"Output: {out_mp3}")
     else:
-        result = sum(sources[i] for i in range(len(source_names)) if source_names[i] != instrument)
-
-    sf.write(tmp_wav, result.cpu().numpy().T, model.samplerate)
-    subprocess.run(
-        ["ffmpeg", "-y", "-i", tmp_wav, "-b:a", bitrate, out_mp3],
-        capture_output=True,
-        check=True,
-    )
-    os.unlink(tmp_wav)
-
-    print(f"Output: {out_mp3}")
+        out_no = os.path.join(output_dir, f"{basename}_no_{instrument}.mp3")
+        out_only = os.path.join(output_dir, f"{basename}_only_{instrument}.mp3")
+        save_mp3(backing, model.samplerate, out_no, bitrate)
+        save_mp3(isolated, model.samplerate, out_only, bitrate)
+        print(f"Output: {out_no}")
+        print(f"Output: {out_only}")
 
 
 def main():
@@ -92,7 +102,7 @@ def main():
     mode.add_argument("-e", "--extract", choices=INSTRUMENTS, help="Instrument to extract (isolate)")
 
     parser.add_argument("-o", "--output", default="/data/output", help="Output directory")
-    parser.add_argument("-b", "--bitrate", default="320k", help="MP3 bitrate (default: 320k)")
+    parser.add_argument("-b", "--bitrate", default="48k", help="MP3 bitrate (default: 48k)")
     parser.add_argument("-m", "--model", default="htdemucs_6s", help="Demucs model (default: htdemucs_6s)")
     args = parser.parse_args()
 

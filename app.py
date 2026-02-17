@@ -23,12 +23,13 @@ INSTRUMENT_MAP = {
     "Vocals": "vocals",
     "Piano": "piano",
 }
-MODES = ["Remove", "Extract"]
 
 # Load model once at startup
 print("Loading Demucs model (htdemucs_6s)...")
 MODEL = get_model("htdemucs_6s")
 MODEL.eval()
+
+BITRATE = "48k"
 
 
 def load_audio(path, samplerate, channels):
@@ -51,13 +52,26 @@ def load_audio(path, samplerate, channels):
         os.unlink(tmp_path)
 
 
-def process(audio_path, instrument, mode):
-    """Separate sources on CPU, return processed audio."""
+def to_mp3(audio_np, samplerate):
+    """Convert numpy audio to MP3 temp file, return path."""
+    tmp_wav = tempfile.mktemp(suffix=".wav")
+    out_mp3 = tempfile.mktemp(suffix=".mp3")
+    sf.write(tmp_wav, audio_np, samplerate)
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", tmp_wav, "-b:a", BITRATE, out_mp3],
+        capture_output=True,
+        check=True,
+    )
+    os.unlink(tmp_wav)
+    return out_mp3
+
+
+def process(audio_path, instrument):
+    """Separate sources on CPU, return backing track and isolated instrument as MP3."""
     if audio_path is None:
         raise gr.Error("Please upload an audio file.")
 
     target = INSTRUMENT_MAP[instrument]
-    extract = mode == "Extract"
 
     wav = load_audio(audio_path, MODEL.samplerate, MODEL.audio_channels)
     wav = wav.unsqueeze(0)  # (1, channels, samples)
@@ -66,34 +80,31 @@ def process(audio_path, instrument, mode):
     sources = sources.squeeze(0)  # (num_sources, channels, samples)
 
     source_names = MODEL.sources
+    target_idx = source_names.index(target)
 
-    if extract:
-        result = sources[source_names.index(target)]
-    else:
-        result = sum(sources[i] for i in range(len(source_names)) if source_names[i] != target)
+    backing = sum(sources[i] for i in range(len(source_names)) if i != target_idx).cpu().numpy().T
+    isolated = sources[target_idx].cpu().numpy().T
 
-    result_np = result.cpu().numpy().T  # (samples, channels)
-
-    out_path = tempfile.mktemp(suffix=".wav")
-    sf.write(out_path, result_np, MODEL.samplerate)
-    return out_path
+    return to_mp3(backing, MODEL.samplerate), to_mp3(isolated, MODEL.samplerate)
 
 
 demo = gr.Interface(
     fn=process,
     inputs=[
         gr.Audio(type="filepath", label="Upload audio (MP3/WAV/FLAC/...)"),
-        gr.Dropdown(choices=INSTRUMENTS, value="Drums", label="Instrument"),
-        gr.Radio(choices=MODES, value="Remove", label="Mode"),
+        gr.Dropdown(choices=INSTRUMENTS, value="Drums", label="Instrument to remove"),
     ],
-    outputs=gr.Audio(type="filepath", label="Processed audio"),
+    outputs=[
+        gr.Audio(type="filepath", label="Backing track (without selected instrument)"),
+        gr.Audio(type="filepath", label="Isolated instrument"),
+    ],
     title="BackTrack",
     description=(
-        "Upload a song and remove or extract the selected instrument. Powered by Demucs (Meta AI).\n\n"
-        "**Remove** — get the song without the selected instrument (e.g. drumless backing track).\n\n"
-        "**Extract** — isolate just the selected instrument (e.g. vocals only).\n\n"
+        "Upload a song and remove the selected instrument. You get two MP3 files back:\n\n"
+        "1. **Backing track** — the song without the selected instrument.\n"
+        "2. **Isolated instrument** — just the selected instrument by itself.\n\n"
         "Supports: Drums, Guitar, Bass, Vocals, Piano.\n\n"
-        "Running on free CPU provided by Hugging Face. Processing takes about 5 minutes per song. Output format: WAV"
+        "Running on free CPU provided by Hugging Face. Processing takes about 5 minutes per song."
     ),
     flagging_mode="never",
 )
